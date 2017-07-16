@@ -4,8 +4,11 @@ Created on Sun Jun 25 16:10:47 2017
 
 @author: T3
 """
-import math
-import operator
+import math #mostly for the square root function right now, but being able to do math is helpful.
+import operator #For sorting the list
+import numpy #I expect to need it for the book, so I'd rather have this in place when I do.
+import matplotlib #I expect to need it for the book, so I'd rather have this in place when I do.
+import pydelicious #I expect to need it for the book, so I'd rather have this in place when I do.
 """
 #List comprehension
 lt = [1,'a',3,'b',5,'c',7,'d',9,'e']
@@ -73,26 +76,31 @@ def sim_pearson(ranking, Critic1,Critic2):
  EYS = 0
  SDY = 0
  count = 0
+ #We are going to calculate peason correlation like a mathematician.
+ #Correlation of two random variables is covariance(X,Y)/(standardDeviationX*standardDeviationY)
+ #Covariance is defined mathematically as 'Expectaion of XY minus (Expectation of X) times
+ # (Expectation of Y). More concisely: E[XY]-(E[X])*(E[Y])
+ #So first we find the expectation (weighted average) of the product of the critics' ratings for each movie
  for movie in ranking[str(Critic1)]:
   if movie in ranking[str(Critic2)]:
    EXY += float((ranking[str(Critic1)][str(movie)] * ranking[str(Critic2)][str(movie)]))
    count += 1
  EXY /= count
-  #Find E[X]
+  #Now we'll find the expectation of the first critic's movie ratings. This is E[X].
  count = 0 
  for movie in ranking[str(Critic1)]:
   if movie in ranking[str(Critic2)]:
    EX += float(ranking[str(Critic1)][str(movie)])
    count += 1
  EX /= count
-  #Find E[Y]
+  #Now we'll find the expectation of the second critic's movie ratings. This is E[Y]
  count = 0 #reset the count variable so that I can use it again.
  for movie in ranking[str(Critic2)]:
   if movie in ranking[str(Critic1)]:
    EY += float(ranking[str(Critic2)][str(movie)])
    count += 1
  EY /= count
- #Find standard deviation
+ #Find standard deviation. In order to do  this we must find the variance of the ratings given by each critic. Variance is defined as the difference between the expectation of the square of the random variable and the square of the expectation of the random variable. More concisely: V(X) = E[X^2] - (E[X])^2
   #Find E[X^2]
  count = 0
  for movie in ranking[str(Critic1)]:
@@ -107,25 +115,26 @@ def sim_pearson(ranking, Critic1,Critic2):
    EYS += (float(ranking[str(Critic2)][str(movie)]))**2
    count += 1
  EYS /= count
-  #Standard Deviation of X
+  #Standard Deviation of X. The standard deviation of a random variable is the square root of the variance of that random variable.
  SDX = math.sqrt(EXS - EX**2)
   #Variance of Y
  SDY = math.sqrt(EYS - EY**2)
- #Final Calculation
+ #Final Calculation. Use the definition of the pearson correlation coefficient as noted above.
  PCC = (EXY - EX*EY)/(SDX*SDY)
  return PCC
- #Print out result
+ #Can print out result to assist in debugging
  #print('The correlation coefficient for', Critic1, 'and', Critic2, 'is', PCC)
 #print(sim_pearson('Toby', 'Michael Phillips'))
 
 def topMatches(ranking, person, n, similarity):
 
+    #create a list of the correlation coefficients for each other critic in the list.
     scores = [(similarity(ranking, person, other), other) for other in ranking if other != person]
     
-    scores.sort()
-    scores.reverse()
+    scores.sort() #Sort the results in ascending order. This is least to greatest correlation
+    scores.reverse() #Reverse the list so that we see the top correlations first in the list.
     
-    print(scores[0:n])
+    print(scores[0:n]) #Show the top 'n' correlations
 
 def getRecommendations(ranking, person, similarity, numberRecommendations, includeNegatives):
     rawScore = {}
@@ -136,6 +145,7 @@ def getRecommendations(ranking, person, similarity, numberRecommendations, inclu
         #Not me
         if eachCritic == person:
             continue
+        #Skip the step if we don't want negative correlations to affect the outcome.
         if (similarity(ranking, person, eachCritic) <= 0) and (includeNegatives == 'FALSE'):
             continue
         #Loop movies
@@ -144,12 +154,12 @@ def getRecommendations(ranking, person, similarity, numberRecommendations, inclu
             if movie in ranking[str(person)]:
                 continue
             #Add rating*similarity to scoreDraft array for that movie
-            rawScore.setdefault(movie, 0)
-            rawScore[movie] += (similarity(ranking, person, eachCritic)*(float(ranking[str(eachCritic)][str(movie)])))
+            rawScore.setdefault(movie, 0) #make sure we start at zero
+            rawScore[movie] += (similarity(ranking, person, eachCritic)*(float(ranking[str(eachCritic)][str(movie)]))) #summing up the product of the coefficient times the rating
             #print(eachCritic, movie, similarity(person, eachCritic), (float(ranking[str(eachCritic)][str(movie)])), similarity(person, eachCritic)*(float(ranking[str(eachCritic)][str(movie)])))
             #Add similarity to movieSim array for that movie
             movieSim.setdefault(movie, 0)
-            movieSim[movie] += similarity(ranking, person, eachCritic)
+            movieSim[movie] += similarity(ranking, person, eachCritic) #sum up the correlations for that movie. This will allow us to divide the raw score so as to get the weighted average.
     
     #For every movie
     for eachMovie in movieSim:
@@ -164,7 +174,7 @@ def getRecommendations(ranking, person, similarity, numberRecommendations, inclu
 #getRecommendations(critics, 'Toby', sim_pearson, 3, 'FALSE')
 
 def transformPrefs(prefs):
-    movies = {} #start witha blank library
+    movies = {} #start with a blank library
     for eachCritic in prefs: #iterate through all of the critics
         for eachMovie in prefs[eachCritic]: #iterate through each movie rated by that critic
             movies.setdefault(eachMovie, {}) #initiate the dectionary level 1 with the movie name
@@ -174,6 +184,6 @@ def transformPrefs(prefs):
 #print(transformPrefs(critics))
 
 movies = transformPrefs(critics) 
-topMatches(movies, 'Superman Returns', 5, sim_pearson)
-getRecommendations(movies, 'Just My Luck', sim_pearson, 3, 'FALSE')
+#topMatches(movies, 'Superman Returns', 5, sim_pearson)
+#getRecommendations(movies, 'Just My Luck', sim_pearson, 3, 'FALSE')
     
